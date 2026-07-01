@@ -1,0 +1,18 @@
+{
+  "name": "Banking Finance",
+  "dataColors": [
+    "#1F3864", "#2E75B6", "#4472C4",
+    "#70AD47", "#FFC000", "#FF6B6B",
+    "#9DC3E6", "#A9D18E"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#1F3864",
+  "tableAccent": "#2E75B6",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "fontFamily": [{"value": "Segoe UI"}]
+      }
+    }
+  }
+}

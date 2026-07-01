@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Banking & Finance — Power BI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1f3864}
+  .topbar{background:#1f3864;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+  .topbar h1{font-size:18px;font-weight:600;letter-spacing:.5px}
+  .topbar .sub{font-size:12px;opacity:.7;margin-top:2px}
+  .tabs{background:#fff;border-bottom:2px solid #e8ecf0;display:flex;padding:0 24px;gap:0}
+  .tab{padding:12px 20px;cursor:pointer;font-size:13px;font-weight:500;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+  .tab.active{color:#1f3864;border-bottom-color:#2e75b6;font-weight:600}
+  .tab:hover{color:#2e75b6}
+  .page{display:none;padding:20px 24px;animation:fadeIn .3s}
+  .page.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:#fff;border-radius:10px;padding:16px 18px;border-left:4px solid #2e75b6;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .kpi.red{border-left-color:#e53e3e}
+  .kpi.green{border-left-color:#38a169}
+  .kpi.yellow{border-left-color:#d69e2e}
+  .kpi .label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .kpi .value{font-size:24px;font-weight:700;color:#1f3864}
+  .kpi .delta{font-size:11px;margin-top:3px}
+  .delta.up{color:#38a169} .delta.down{color:#e53e3e}
+  .charts-grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:2fr 1fr 1fr}
+  .g12{grid-template-columns:1fr 2fr}
+  .chart-card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .chart-card h3{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;font-weight:600}
+  canvas{max-height:220px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#f5f7fa;padding:8px 10px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e8ecf0}
+  td{padding:7px 10px;border-bottom:1px solid #f0f2f5}
+  tr:hover td{background:#f9fafb}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+  .badge.npa{background:#fee2e2;color:#c53030}
+  .badge.active{background:#c6f6d5;color:#276749}
+  .badge.closed{background:#e2e8f0;color:#4a5568}
+  .badge.review{background:#fefcbf;color:#975a16}
+  .meter-wrap{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .meter{display:flex;align-items:center;gap:10px;font-size:12px}
+  .meter .name{width:110px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meter-bar{flex:1;background:#e8ecf0;border-radius:6px;height:10px;overflow:hidden}
+  .meter-fill{height:100%;border-radius:6px;transition:width 1s}
+  .meter .pct{width:36px;text-align:right;font-weight:600;color:#1f3864;font-size:11px}
+  .filter-row{display:flex;gap:10px;margin-bottom:16px;align-items:center}
+  .filter-row label{font-size:12px;color:#555;font-weight:600}
+  .filter-row select{padding:5px 10px;border:1px solid #e8ecf0;border-radius:6px;font-size:12px;color:#1f3864;background:#fff}
+  .sparkline-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+  .sp-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;justify-content:space-between;align-items:center}
+  .sp-left .sp-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px}
+  .sp-left .sp-val{font-size:22px;font-weight:700;color:#1f3864;margin-top:2px}
+  .sp-left .sp-sub{font-size:11px;color:#38a169;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="h1" style="font-size:18px;font-weight:700">🏦 Banking & Finance Dashboard</div>
+    <div class="sub">Power BI Sample Project · FY 2023–2024 · 500 Customers · 20 Branches</div>
+  </div>
+  <div style="font-size:12px;opacity:.6">Last Refreshed: 25 Jun 2026</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPage(0)">📊 Executive Summary</div>
+  <div class="tab" onclick="showPage(1)">💳 Loans & Credit Risk</div>
+  <div class="tab" onclick="showPage(2)">💸 Transactions</div>
+  <div class="tab" onclick="showPage(3)">👥 Customers & Accounts</div>
+  <div class="tab" onclick="showPage(4)">🏢 Branch Performance</div>
+</div>
+
+<!-- PAGE 0: Executive Summary -->
+<div class="page active" id="p0">
+  <div class="kpi-row">
+    <div class="kpi green"><div class="label">Total Deposits</div><div class="value">₹4,218 Cr</div><div class="delta up">▲ 12.4% vs LY</div></div>
+    <div class="kpi"><div class="label">Loans Disbursed</div><div class="value">₹1,847 Cr</div><div class="delta up">▲ 8.1% vs LY</div></div>
+    <div class="kpi red"><div class="label">NPA Ratio</div><div class="value">4.2%</div><div class="delta down">▲ 0.3% vs LY</div></div>
+    <div class="kpi yellow"><div class="label">CASA Ratio</div><div class="value">43.7%</div><div class="delta up">▲ 1.2% vs LY</div></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Total Customers</div><div class="value">500</div><div class="delta up">▲ 68 New YTD</div></div>
+    <div class="kpi"><div class="label">Active Accounts</div><div class="value">624</div><div class="delta up">▲ 5.2%</div></div>
+    <div class="kpi green"><div class="label">Net Cash Flow</div><div class="value">₹312 Cr</div><div class="delta up">Positive</div></div>
+    <div class="kpi"><div class="label">Branches Hitting Target</div><div class="value">14 / 20</div><div class="delta up">70%</div></div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Monthly Transaction Volume (₹ Cr)</h3><canvas id="c_txnline"></canvas></div>
+    <div class="chart-card"><h3>Loans & Deposits by Segment</h3><canvas id="c_segbar"></canvas></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Transaction Volume by Channel</h3><canvas id="c_channel"></canvas></div>
+    <div class="chart-card"><h3>Portfolio Mix</h3><canvas id="c_portmix"></canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 1: Loans & Credit Risk -->
+<div class="page" id="p1">
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Total Loan Portfolio</div><div class="value">₹1,847 Cr</div><div class="delta">300 Loans</div></div>
+    <div class="kpi red"><div class="label">NPA Amount</div><div class="value">₹77.6 Cr</div><div class="delta down">NPA Ratio: 4.2%</div></div>
+    <div class="kpi yellow"><div class="label">DPD 90+ Accounts</div><div class="value">42</div><div class="delta down">14% of portfolio</div></div>
+    <div class="kpi green"><div class="label">Collection Efficiency</div><div class="value">95.8%</div><div class="delta up">▲ 0.4% MoM</div></div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Loan Distribution by Type</h3><canvas id="c_loantype"></canvas></div>
+    <div class="chart-card"><h3>NPA by Loan Type (₹ Cr)</h3><canvas id="c_npa"></canvas></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card">
+      <h3>DPD Bucket Analysis</h3>
+      <canvas id="c_dpd"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Top Stressed Accounts</h3>
+      <table>
+        <thead><tr><th>Customer ID</th><th>Loan Type</th><th>Outstanding</th><th>DPD</th><th>Status</th></tr></thead>
+        <tbody id="stressTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Transactions -->
+<div class="page" id="p2">
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Total Txn Volume</div><div class="value">₹8,432 Cr</div><div class="delta up">5,000 Transactions</div></div>
+    <div class="kpi green"><div class="label">Completed Txns</div><div class="value">92.0%</div><div class="delta up">4,600 txns</div></div>
+    <div class="kpi red"><div class="label">Failed Txns</div><div class="value">3.0%</div><div class="delta down">150 txns</div></div>
+    <div class="kpi"><div class="label">Avg Txn Value</div><div class="value">₹1.69 L</div><div class="delta">Per transaction</div></div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Net Cash Flow — Monthly Waterfall (₹ Cr)</h3><canvas id="c_waterfall"></canvas></div>
+    <div class="chart-card"><h3>Transaction Type Breakdown</h3><canvas id="c_txntype"></canvas></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Monthly Failure Rate Trend (%)</h3><canvas id="c_failrate"></canvas></div>
+    <div class="chart-card"><h3>Digital vs Branch Channel Split</h3><canvas id="c_digital"></canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 3: Customers & Accounts -->
+<div class="page" id="p3">
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Total Customers</div><div class="value">500</div><div class="delta up">425 Active</div></div>
+    <div class="kpi green"><div class="label">Avg Credit Score</div><div class="value">712</div><div class="delta up">Good Band</div></div>
+    <div class="kpi red"><div class="label">High Risk Customers</div><div class="value">87</div><div class="delta down">Score &lt; 650</div></div>
+    <div class="kpi yellow"><div class="label">CASA Ratio</div><div class="value">43.7%</div><div class="delta">Savings + Current</div></div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Customer Segments</h3><canvas id="c_seg"></canvas></div>
+    <div class="chart-card"><h3>Credit Score Distribution</h3><canvas id="c_credit"></canvas></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Account Type Balance (₹ Cr)</h3><canvas id="c_acctype"></canvas></div>
+    <div class="chart-card"><h3>New Customers — Monthly Trend</h3><canvas id="c_newcust"></canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 4: Branch Performance -->
+<div class="page" id="p4">
+  <div class="kpi-row">
+    <div class="kpi green"><div class="label">Branches on Target</div><div class="value">14 / 20</div><div class="delta up">70% Achievement</div></div>
+    <div class="kpi"><div class="label">Top Branch Deposits</div><div class="value">BR012</div><div class="delta up">₹342 Cr</div></div>
+    <div class="kpi"><div class="label">Avg Staff / Branch</div><div class="value">24</div><div class="delta">480 Total Staff</div></div>
+    <div class="kpi yellow"><div class="label">Revenue per Staff</div><div class="value">₹17.6 L</div><div class="delta up">▲ 6.2% vs LY</div></div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card">
+      <h3>Branch Deposit Target Achievement</h3>
+      <div class="meter-wrap" id="branchMeters"></div>
+    </div>
+    <div class="chart-card"><h3>Deposits by Region</h3><canvas id="c_region"></canvas></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card"><h3>Loans Disbursed by Branch (Top 10)</h3><canvas id="c_branchloan"></canvas></div>
+    <div class="chart-card"><h3>Branch Type Distribution</h3><canvas id="c_branchtype"></canvas></div>
+  </div>
+</div>
+
+<script>
+const BLUE=['#1F3864','#2E75B6','#4472C4','#9DC3E6','#70AD47','#FFC000','#FF6B6B','#A9D18E'];
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const months24 = months.map(m=>m+' 23').concat(months.map(m=>m+' 24'));
+
+function mkChart(id, type, labels, datasets, opts={}){
+  const ctx=document.getElementById(id);
+  if(!ctx)return;
+  new Chart(ctx,{type,data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{position:opts.legendPos||'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{callbacks:{}}},
+    scales:opts.scales||{},
+    ...opts.extra
+  }});
+}
+
+// PAGE 0
+mkChart('c_txnline','line',months24,
+  [{label:'Volume (₹ Cr)',data:[310,285,340,298,365,380,292,415,388,402,440,468,390,360,410,425,480,510,445,522,560,498,580,612],
+    borderColor:'#2E75B6',backgroundColor:'rgba(46,117,182,.1)',fill:true,tension:.4,pointRadius:3}],
+  {scales:{y:{ticks:{font:{size:9}},grid:{color:'#f0f2f5'}},x:{ticks:{font:{size:9}},grid:{display:false}}}});
+
+mkChart('c_segbar','bar',['Retail','SME','Corporate','Premium'],
+  [{label:'Deposits (₹ Cr)',data:[1820,920,1100,378],backgroundColor:'#2E75B6'},
+   {label:'Loans (₹ Cr)',data:[720,480,520,127],backgroundColor:'#70AD47'}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}},legendPos:'bottom'});
+
+mkChart('c_channel','doughnut',['Net Banking','Mobile App','ATM','Branch','NEFT/RTGS'],
+  [{data:[32,28,18,14,8],backgroundColor:BLUE}]);
+
+mkChart('c_portmix','doughnut',['Home Loan','Personal Loan','Auto Loan','Business Loan','Education Loan'],
+  [{data:[35,25,18,14,8],backgroundColor:BLUE.slice(0,5)}]);
+
+// PAGE 1
+mkChart('c_loantype','bar',['Home Loan','Personal','Auto','Business','Education'],
+  [{label:'Amount (₹ Cr)',data:[646,462,333,258,148],backgroundColor:BLUE}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_npa','bar',['Home Loan','Personal','Auto','Business','Education'],
+  [{label:'NPA (₹ Cr)',data:[21.8,19.4,12.6,18.2,5.6],backgroundColor:'#FF6B6B'}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_dpd','bar',['DPD 0','DPD 1-29','DPD 30-59','DPD 60-89','DPD 90-119','DPD 120+'],
+  [{label:'Count',data:[225,30,18,15,7,5],backgroundColor:['#70AD47','#A9D18E','#FFC000','#FF9500','#FF6B6B','#C53030']}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+const stressData=[['CUST0142','Home Loan','₹48.2L',120,'NPA'],['CUST0287','Business Loan','₹82.5L',180,'NPA'],
+  ['CUST0063','Personal Loan','₹12.8L',90,'Review'],['CUST0391','Auto Loan','₹8.4L',60,'Active'],
+  ['CUST0218','Home Loan','₹65.1L',120,'NPA'],['CUST0475','Education Loan','₹5.2L',90,'Review']];
+const tb=document.getElementById('stressTable');
+stressData.forEach(r=>{
+  const cls=r[4]==='NPA'?'npa':r[4]==='Active'?'active':r[4]==='Closed'?'closed':'review';
+  tb.innerHTML+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td style="color:${r[3]>=90?'#c53030':'#d69e2e'};font-weight:600">${r[3]}</td><td><span class="badge ${cls}">${r[4]}</span></td></tr>`;
+});
+
+// PAGE 2
+mkChart('c_waterfall','bar',months,
+  [{label:'Net Flow (₹ Cr)',data:[28,22,35,-8,42,38,31,45,-12,29,48,54],
+    backgroundColor:m=>m.raw>=0?'rgba(56,161,105,.8)':'rgba(229,62,62,.8)'}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_txntype','doughnut',['Deposit','Withdrawal','Transfer','Bill Payment','Loan EMI','Interest'],
+  [{data:[25,22,20,15,12,6],backgroundColor:BLUE}]);
+
+mkChart('c_failrate','line',months24.slice(12),
+  [{label:'Failure Rate %',data:[3.2,3.5,2.8,3.1,2.9,3.4,2.6,3.0,2.7,2.5,2.8,2.4],
+    borderColor:'#FF6B6B',backgroundColor:'rgba(255,107,107,.1)',fill:true,tension:.4,pointRadius:3}],
+  {scales:{y:{min:0,max:5,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_digital','doughnut',['Digital (App+Net)','ATM','Branch','NEFT'],
+  [{data:[60,18,14,8],backgroundColor:['#2E75B6','#70AD47','#FFC000','#9DC3E6']}]);
+
+// PAGE 3
+mkChart('c_seg','doughnut',['Retail','SME','Corporate','Premium'],
+  [{data:[250,125,75,50],backgroundColor:BLUE}]);
+
+mkChart('c_credit','bar',['550-599','600-649','650-699','700-749','750-799','800-850'],
+  [{label:'Customers',data:[42,45,98,145,122,48],backgroundColor:['#FF6B6B','#FF9500','#FFC000','#A9D18E','#70AD47','#1F3864']}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_acctype','bar',['Savings','Current','Fixed Deposit','Recurring Dep'],
+  [{label:'Balance (₹ Cr)',data:[1240,600,1820,558],backgroundColor:BLUE}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_newcust','line',months,
+  [{label:'New Customers',data:[32,28,35,29,38,42,31,44,38,40,46,50],
+    borderColor:'#4472C4',backgroundColor:'rgba(68,114,196,.1)',fill:true,tension:.4,pointRadius:3}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+// PAGE 4 — meters
+const branches=[
+  {name:'BR001 Mumbai',pct:112},  {name:'BR002 Delhi',pct:98},
+  {name:'BR003 Bangalore',pct:88},{name:'BR004 Chennai',pct:105},
+  {name:'BR005 Hyderabad',pct:76},{name:'BR006 Pune',pct:115},
+  {name:'BR007 Kolkata',pct:62}, {name:'BR008 Mumbai',pct:94},
+  {name:'BR009 Delhi',pct:108},  {name:'BR010 Bangalore',pct:83},
+];
+const mw=document.getElementById('branchMeters');
+branches.forEach(b=>{
+  const color=b.pct>=100?'#70AD47':b.pct>=80?'#FFC000':'#FF6B6B';
+  mw.innerHTML+=`<div class="meter"><span class="name">${b.name}</span><div class="meter-bar"><div class="meter-fill" style="width:${Math.min(b.pct,100)}%;background:${color}"></div></div><span class="pct">${b.pct}%</span></div>`;
+});
+
+mkChart('c_region','bar',['Mumbai','Delhi','Bangalore','Chennai','Hyderabad','Pune','Kolkata'],
+  [{label:'Deposits (₹ Cr)',data:[920,780,640,520,480,420,380],backgroundColor:'#2E75B6'}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_branchloan','bar',
+  ['BR012','BR001','BR004','BR006','BR009','BR002','BR008','BR005','BR003','BR007'],
+  [{label:'Loans (₹ Cr)',data:[342,298,276,254,231,218,205,192,178,165],backgroundColor:'#4472C4'}],
+  {scales:{y:{ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}});
+
+mkChart('c_branchtype','doughnut',['Metro','Urban','Semi-Urban','Rural'],
+  [{data:[5,7,5,3],backgroundColor:BLUE}]);
+
+function showPage(idx){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===idx));
+}
+</script>
+</body>
+</html>

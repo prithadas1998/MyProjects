@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Banking & Finance — Power BI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f3f7;color:#0d1b2e;font-size:13px}
+
+/* TOPBAR */
+.topbar{background:#094782;color:#fff;padding:0 20px;height:44px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar h1{font-size:15px;font-weight:600;letter-spacing:.3px}
+.topbar .badge{background:rgba(255,255,255,.18);font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.topbar-right{font-size:11px;opacity:.65}
+
+/* PAGE NAV */
+.page-nav{background:#fff;border-bottom:1px solid #dde3ed;padding:0 20px;display:flex;gap:0;overflow-x:auto}
+.page-nav::-webkit-scrollbar{height:3px}
+.page-nav::-webkit-scrollbar-thumb{background:#ccc}
+.pnav-btn{padding:11px 16px;font-size:12px;font-weight:500;color:#6b7a99;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .15s}
+.pnav-btn:hover{color:#094782}
+.pnav-btn.active{color:#094782;border-bottom-color:#0B72D7;font-weight:600}
+
+/* SLICER BAR */
+.slicer-bar{background:#fff;border-bottom:1px solid #eaedf3;padding:7px 20px;display:flex;align-items:center;gap:12px}
+.slicer-bar label{font-size:11px;color:#8a94a6;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.slicer-bar select{font-size:12px;padding:4px 10px;border:1px solid #dde3ed;border-radius:5px;background:#f7f9fc;color:#0d1b2e;cursor:pointer}
+.slicer-bar select:focus{outline:2px solid #0B72D7;outline-offset:1px}
+
+/* PAGE */
+.page{display:none;padding:16px 20px 24px}
+.page.active{display:block;animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* GRID HELPERS */
+.grid{display:grid;gap:12px;margin-bottom:12px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:1fr 1fr}
+.g31{grid-template-columns:3fr 1fr}
+.g13{grid-template-columns:1fr 3fr}
+.g21{grid-template-columns:2fr 1fr}
+.g12{grid-template-columns:1fr 2fr}
+.g211{grid-template-columns:2fr 1fr 1fr}
+.g121{grid-template-columns:1fr 2fr 1fr}
+@media(max-width:900px){.g4,.g2,.g31,.g13,.g21,.g12,.g211,.g121{grid-template-columns:1fr}}
+
+/* KPI CARD */
+.kpi{background:#fff;border-radius:8px;padding:14px 16px;border-left:4px solid #0B72D7;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(11,114,215,.06)}
+.kpi.red{border-left-color:#c0392b}
+.kpi.green{border-left-color:#57B956}
+.kpi.amber{border-left-color:#FB9631}
+.kpi.purple{border-left-color:#7203A6}
+.kpi .kpi-label{font-size:10px;color:#8a94a6;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;font-weight:600}
+.kpi .kpi-val{font-size:22px;font-weight:700;color:#094782;line-height:1.1}
+.kpi .kpi-sub{font-size:10px;margin-top:4px;color:#8a94a6}
+.kpi .kpi-sub.up{color:#57B956}.kpi .kpi-sub.down{color:#c0392b}
+
+/* CHART CARD */
+.card{background:#fff;border-radius:8px;padding:14px 16px}
+.card .card-title{font-size:11px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;border-bottom:1px solid #f0f3f7;padding-bottom:7px}
+.card canvas{max-height:230px}
+
+/* TABLE */
+.tbl-wrap{overflow:auto;max-height:300px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead th{background:#f5f7fb;padding:7px 8px;text-align:left;font-weight:600;color:#6b7a99;border-bottom:2px solid #eaedf3;position:sticky;top:0}
+tbody td{padding:6px 8px;border-bottom:1px solid #f0f3f7}
+tbody tr:hover td{background:#f7f9fc}
+.badge-npa{background:#fde8e8;color:#c0392b;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-active{background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-review{background:#fff8e1;color:#e65100;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.dpd-high{color:#c0392b;font-weight:700}
+.dpd-mid{color:#FB9631;font-weight:700}
+.dpd-ok{color:#57B956;font-weight:700}
+
+/* BRANCH METER */
+.meter-list{display:flex;flex-direction:column;gap:6px;overflow:auto;max-height:230px}
+.meter-row{display:grid;grid-template-columns:80px 1fr 38px;align-items:center;gap:8px;font-size:11px}
+.meter-label{color:#6b7a99;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter-bar{height:8px;background:#eaedf3;border-radius:4px;overflow:hidden}
+.meter-fill{height:100%;border-radius:4px;transition:width .8s ease}
+.meter-pct{font-weight:700;font-size:10px;text-align:right}
+
+/* TREEMAP */
+.treemap{display:flex;flex-wrap:wrap;gap:3px;height:180px;overflow:hidden}
+.treemap-cell{border-radius:5px;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:opacity .15s;overflow:hidden}
+.treemap-cell:hover{opacity:.85}
+.treemap-cell .tm-label{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.treemap-cell .tm-val{font-size:9px;color:rgba(255,255,255,.8)}
+
+/* DONUT LEGEND */
+.donut-wrap{display:flex;align-items:center;gap:10px}
+.donut-legend{display:flex;flex-direction:column;gap:5px;font-size:11px}
+.donut-legend-item{display:flex;align-items:center;gap:5px}
+.donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* SECTION HEADER */
+.sec-hdr{font-size:11px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.5px;margin:4px 0 10px;padding-bottom:4px;border-bottom:2px solid #eaedf3}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="10" width="18" height="11" rx="2" fill="rgba(255,255,255,.9)"/><path d="M3 10L12 3l9 7" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/><rect x="9" y="14" width="6" height="7" fill="#094782"/></svg>
+    <h1>Banking &amp; Finance Dashboard</h1>
+    <span class="badge">Tidal Theme</span>
+  </div>
+  <div class="topbar-right">FY 2023–2024 &nbsp;·&nbsp; Last refresh: 25 Jun 2026</div>
+</div>
+
+<div class="page-nav">
+  <button class="pnav-btn active" onclick="showPage(0)">Executive Summary</button>
+  <button class="pnav-btn" onclick="showPage(1)">Loans &amp; Credit Risk</button>
+  <button class="pnav-btn" onclick="showPage(2)">Transactions</button>
+  <button class="pnav-btn" onclick="showPage(3)">Customers &amp; Accounts</button>
+  <button class="pnav-btn" onclick="showPage(4)">Branch Performance</button>
+</div>
+
+<div class="slicer-bar">
+  <label>Year</label>
+  <select id="sl-year" onchange="applySlicers()">
+    <option value="All">All</option>
+    <option value="2023">2023</option>
+    <option value="2024">2024</option>
+  </select>
+  <label>Region</label>
+  <select id="sl-region" onchange="applySlicers()">
+    <option value="All">All Regions</option>
+    <option>Mumbai</option><option>Delhi</option><option>Bangalore</option>
+    <option>Chennai</option><option>Hyderabad</option><option>Pune</option><option>Kolkata</option>
+  </select>
+</div>
+
+<!-- PAGE 0: EXECUTIVE SUMMARY -->
+<div class="page active" id="p0">
+  <div class="grid g4">
+    <div class="kpi green"><div class="kpi-label">Total Deposits</div><div class="kpi-val" id="k-dep">₹421.8 Cr</div><div class="kpi-sub up">▲ 12.4% vs last year</div></div>
+    <div class="kpi"><div class="kpi-label">Loans Disbursed</div><div class="kpi-val" id="k-loan">₹184.7 Cr</div><div class="kpi-sub up">▲ 8.1% vs last year</div></div>
+    <div class="kpi red"><div class="kpi-label">NPA Ratio</div><div class="kpi-val" id="k-npa">4.2%</div><div class="kpi-sub down">▲ 0.3% vs last year</div></div>
+    <div class="kpi amber"><div class="kpi-label">CASA Ratio</div><div class="kpi-val" id="k-casa">43.7%</div><div class="kpi-sub up">▲ 1.2% vs last year</div></div>
+  </div>
+  <div class="grid g21">
+    <div class="card"><div class="card-title">Monthly Transaction Volume</div><canvas id="c-txnline"></canvas></div>
+    <div class="card"><div class="card-title">Deposits vs Loans by Segment</div><canvas id="c-segbar"></canvas></div>
+  </div>
+  <div class="grid g31">
+    <div class="card">
+      <div class="card-title">Transaction Volume by Channel</div>
+      <div class="donut-wrap">
+        <div style="position:relative;width:160px;height:160px;flex-shrink:0"><canvas id="c-channel"></canvas></div>
+        <div class="donut-legend" id="leg-channel"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Deposits by Region</div><div class="treemap" id="treemap-region"></div></div>
+  </div>
+</div>
+
+<!-- PAGE 1: LOANS -->
+<div class="page" id="p1">
+  <div class="grid g4">
+    <div class="kpi"><div class="kpi-label">Total Loan Portfolio</div><div class="kpi-val">₹184.7 Cr</div><div class="kpi-sub">300 active loans</div></div>
+    <div class="kpi red"><div class="kpi-label">NPA Amount</div><div class="kpi-val">₹7.76 Cr</div><div class="kpi-sub down">NPA Ratio: 4.2%</div></div>
+    <div class="kpi amber"><div class="kpi-label">DPD 90+ Accounts</div><div class="kpi-val">42</div><div class="kpi-sub down">14% of portfolio</div></div>
+    <div class="kpi green"><div class="kpi-label">Collection Efficiency</div><div class="kpi-val">95.8%</div><div class="kpi-sub up">▲ 0.4% MoM</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-title">Loan Amount by Type</div><canvas id="c-loantype"></canvas></div>
+    <div class="card"><div class="card-title">NPA Amount by Type</div><canvas id="c-npatype"></canvas></div>
+  </div>
+  <div class="grid g12">
+    <div class="card"><div class="card-title">DPD Bucket Distribution</div><canvas id="c-dpd"></canvas></div>
+    <div class="card">
+      <div class="card-title">Stressed Accounts (DPD ≥ 60)</div>
+      <div class="tbl-wrap">
+        <table id="t-stress">
+          <thead><tr><th>Customer ID</th><th>Loan Type</th><th>Outstanding</th><th>DPD</th><th>Status</th></tr></thead>
+          <tbody id="tb-stress"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: TRANSACTIONS -->
+<div class="page" id="p2">
+  <div class="grid g4">
+    <div class="kpi"><div class="kpi-label">Total Txn Volume</div><div class="kpi-val">₹843.2 Cr</div><div class="kpi-sub up">5,000 transactions</div></div>
+    <div class="kpi green"><div class="kpi-label">Completion Rate</div><div class="kpi-val">92.0%</div><div class="kpi-sub up">4,600 completed</div></div>
+    <div class="kpi red"><div class="kpi-label">Failure Rate</div><div class="kpi-val">3.0%</div><div class="kpi-sub down">150 failed</div></div>
+    <div class="kpi"><div class="kpi-label">Avg Transaction Value</div><div class="kpi-val">₹1.69 L</div><div class="kpi-sub">Per transaction</div></div>
+  </div>
+  <div class="grid g21">
+    <div class="card"><div class="card-title">Net Cash Flow — Monthly Waterfall</div><canvas id="c-waterfall"></canvas></div>
+    <div class="card">
+      <div class="card-title">Volume by Transaction Type</div>
+      <div class="donut-wrap" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div style="position:relative;width:130px;height:130px"><canvas id="c-txntype"></canvas></div>
+        <div class="donut-legend" id="leg-txntype"></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-title">Monthly Failure Rate Trend (%)</div><canvas id="c-failrate"></canvas></div>
+    <div class="card"><div class="card-title">Transactions by Channel</div><canvas id="c-chcount"></canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 3: CUSTOMERS -->
+<div class="page" id="p3">
+  <div class="grid g4">
+    <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-val">500</div><div class="kpi-sub up">68 new YTD</div></div>
+    <div class="kpi green"><div class="kpi-label">Active Customers</div><div class="kpi-val">425</div><div class="kpi-sub up">85% active rate</div></div>
+    <div class="kpi"><div class="kpi-label">Avg Credit Score</div><div class="kpi-val">712</div><div class="kpi-sub up">Good band</div></div>
+    <div class="kpi amber"><div class="kpi-label">CASA Ratio</div><div class="kpi-val">43.7%</div><div class="kpi-sub">Savings + Current</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-title">Customers by Segment</div>
+      <div class="donut-wrap">
+        <div style="position:relative;width:150px;height:150px;flex-shrink:0"><canvas id="c-seg"></canvas></div>
+        <div class="donut-legend" id="leg-seg"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Credit Score Distribution</div><canvas id="c-credit"></canvas></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-title">Balance by Account Type</div><canvas id="c-accbal"></canvas></div>
+    <div class="card"><div class="card-title">New Customers — Monthly Trend</div><canvas id="c-newcust"></canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 4: BRANCHES -->
+<div class="page" id="p4">
+  <div class="grid g4">
+    <div class="kpi green"><div class="kpi-label">Branches on Target</div><div class="kpi-val">14 / 20</div><div class="kpi-sub up">70% achievement</div></div>
+    <div class="kpi"><div class="kpi-label">Total Branches</div><div class="kpi-val">20</div><div class="kpi-sub">Across 7 regions</div></div>
+    <div class="kpi"><div class="kpi-label">Avg Staff / Branch</div><div class="kpi-val">24</div><div class="kpi-sub">480 total staff</div></div>
+    <div class="kpi amber"><div class="kpi-label">Total Loans (Branches)</div><div class="kpi-val">₹184.7 Cr</div><div class="kpi-sub up">▲ 8.1%</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-title">Deposit Target Achievement by Branch</div>
+      <div class="meter-list" id="branch-meters"></div>
+    </div>
+    <div class="card"><div class="card-title">Deposits by Region</div><canvas id="c-regdep"></canvas></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-title">Loans Disbursed by Branch (Top 10)</div><canvas id="c-branchloan"></canvas></div>
+    <div class="card">
+      <div class="card-title">Branch Type Mix</div>
+      <div class="donut-wrap">
+        <div style="position:relative;width:140px;height:140px;flex-shrink:0"><canvas id="c-brtype"></canvas></div>
+        <div class="donut-legend" id="leg-brtype"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── TIDAL THEME COLORS (extracted from pbix) ───────────────────────────────
+const T = ['#094782','#0B72D7','#098BF5','#54B5FB','#FB9631','#57B956','#7203A6','#326633'];
+const RED = '#c0392b';
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const months24 = ['Jan 23','Feb 23','Mar 23','Apr 23','May 23','Jun 23',
+                  'Jul 23','Aug 23','Sep 23','Oct 23','Nov 23','Dec 23',
+                  'Jan 24','Feb 24','Mar 24','Apr 24','May 24','Jun 24',
+                  'Jul 24','Aug 24','Sep 24','Oct 24','Nov 24','Dec 24'];
+
+const txnVol = [310,285,340,298,365,380,292,415,388,402,440,468,390,360,410,425,480,510,445,522,560,498,580,612].map(v=>v*1e5);
+const cashFlow= [28,22,35,-8,42,38,31,45,-12,29,48,54,24,30,38,-6,44,40,33,48,-9,31,50,56].map(v=>v*1e5);
+const failRate= [3.2,3.5,2.8,3.1,2.9,3.4,2.6,3.0,2.7,2.5,2.8,2.4,3.1,2.7,2.4,2.9,2.6,3.2,2.5,2.8,2.4,2.7,2.3,2.5];
+const newCust = [32,28,35,29,38,42,31,44,38,40,46,50,30,25,33,28,36,40,29,42,36,38,44,48];
+
+// ─── CHART DEFAULTS ──────────────────────────────────────────────────────────
+Chart.defaults.font.family = "'Segoe UI', Arial, sans-serif";
+Chart.defaults.font.size = 10;
+Chart.defaults.color = '#8a94a6';
+Chart.defaults.plugins.legend.display = false;
+
+function mkChart(id, type, labels, datasets, opts={}) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  return new Chart(el, {
+    type, data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:opts.tooltip||undefined}}},
+      scales: type==='doughnut'||type==='pie' ? {} : {
+        x:{grid:{display:false}, ticks:{font:{size:9},maxRotation:45}},
+        y:{grid:{color:'#f0f3f7'}, ticks:{font:{size:9}, ...opts.yTicks}}
+      },
+      ...opts.extra
+    }
+  });
+}
+
+function fmt(n){
+  if(n>=1e7) return '₹'+(n/1e7).toFixed(1)+' Cr';
+  if(n>=1e5) return '₹'+(n/1e5).toFixed(1)+' L';
+  return '₹'+n.toLocaleString('en-IN');
+}
+
+// ─── PAGE 0 CHARTS ───────────────────────────────────────────────────────────
+mkChart('c-txnline','line',months24,[{
+  label:'Volume', data:txnVol, borderColor:T[1], backgroundColor:'rgba(11,114,215,.08)',
+  fill:true, tension:.35, pointRadius:2, pointHoverRadius:5, borderWidth:2
+}],{tooltip:ctx=>fmt(ctx.raw)});
+
+mkChart('c-segbar','bar',['Retail','SME','Corporate','Premium'],[
+  {label:'Deposits',data:[182e6,92e6,110e6,37.8e6],backgroundColor:T[0],borderRadius:3},
+  {label:'Loans',  data:[72e6,48e6,52e6,12.7e6], backgroundColor:T[2],borderRadius:3}
+],{yTicks:{callback:v=>fmt(v)},extra:{plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9}}}}}});
+
+const chLabels=['Net Banking','Mobile App','ATM','Branch','NEFT/RTGS'];
+const chData=[32,28,18,14,8];
+mkChart('c-channel','doughnut',chLabels,[{data:chData,backgroundColor:T,borderWidth:1,hoverOffset:4}]);
+buildLegend('leg-channel',chLabels,chData,T,'%');
+
+buildTreemap('treemap-region',
+  ['Mumbai','Delhi','Bangalore','Chennai','Hyderabad','Pune','Kolkata'],
+  [920,780,640,520,480,420,380],
+  [T[0],T[1],T[2],'#326633','#57B956',T[4],'#7203A6']
+);
+
+// ─── PAGE 1 CHARTS ───────────────────────────────────────────────────────────
+const loanTypes=['Home Loan','Personal Loan','Auto Loan','Business Loan','Education Loan'];
+mkChart('c-loantype','bar',loanTypes,[{
+  data:[646e5,462e5,333e5,258e5,148e5], backgroundColor:T[0], borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)},extra:{indexAxis:'y'}});
+
+mkChart('c-npatype','bar',loanTypes,[{
+  data:[21.8e5,19.4e5,12.6e5,18.2e5,5.6e5], backgroundColor:RED, borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)},extra:{indexAxis:'y'}});
+
+mkChart('c-dpd','bar',['Current','1-29 Days','30-59 Days','60-89 Days','90-119 Days','120+ Days'],[{
+  data:[225,30,18,15,7,5],
+  backgroundColor:['#57B956','#a8d8a8','#FB9631','#e07b00',RED,'#7a0000'],
+  borderRadius:3
+}]);
+
+const stressed=[
+  {c:'CUST0142',t:'Home Loan',o:'₹48.2L',d:120,s:'NPA'},
+  {c:'CUST0287',t:'Business Loan',o:'₹82.5L',d:180,s:'NPA'},
+  {c:'CUST0063',t:'Personal Loan',o:'₹12.8L',d:90,s:'NPA'},
+  {c:'CUST0391',t:'Auto Loan',o:'₹8.4L',d:60,s:'Active'},
+  {c:'CUST0218',t:'Home Loan',o:'₹65.1L',d:120,s:'NPA'},
+  {c:'CUST0475',t:'Education Loan',o:'₹5.2L',d:90,s:'NPA'},
+  {c:'CUST0112',t:'Business Loan',o:'₹34.8L',d:30,s:'Active'},
+  {c:'CUST0334',t:'Personal Loan',o:'₹9.6L',d:90,s:'NPA'},
+];
+const tb=document.getElementById('tb-stress');
+stressed.forEach(r=>{
+  const dc=r.d>=90?'dpd-high':r.d>=30?'dpd-mid':'dpd-ok';
+  const sc=r.s==='NPA'?'badge-npa':r.s==='Active'?'badge-active':'badge-review';
+  tb.innerHTML+=`<tr><td>${r.c}</td><td>${r.t}</td><td>${r.o}</td><td class="${dc}">${r.d}</td><td><span class="${sc}">${r.s}</span></td></tr>`;
+});
+
+// ─── PAGE 2 CHARTS ───────────────────────────────────────────────────────────
+const waterfallColors = cashFlow.map(v=>v>=0?'rgba(87,185,86,.85)':'rgba(192,57,43,.85)');
+mkChart('c-waterfall','bar',months24,[{
+  data:cashFlow, backgroundColor:waterfallColors, borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)}});
+
+const ttLabels=['Deposit','Withdrawal','Transfer','Bill Pay','Loan EMI','Interest'];
+const ttData=[25,22,20,15,12,6];
+mkChart('c-txntype','doughnut',ttLabels,[{data:ttData,backgroundColor:T,borderWidth:1}]);
+buildLegend('leg-txntype',ttLabels,ttData,T,'%');
+
+mkChart('c-failrate','line',months24,[{
+  data:failRate, borderColor:RED, backgroundColor:'rgba(192,57,43,.08)',
+  fill:true, tension:.35, pointRadius:2, borderWidth:2
+}],{extra:{scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},y:{min:0,max:5,grid:{color:'#f0f3f7'},ticks:{font:{size:9},callback:v=>v+'%'}}}}});
+
+mkChart('c-chcount','bar',['Net Banking','Mobile App','ATM','Branch','NEFT/RTGS'],[{
+  data:[1600,1400,900,700,400], backgroundColor:T, borderRadius:3
+}]);
+
+// ─── PAGE 3 CHARTS ───────────────────────────────────────────────────────────
+const segLabels=['Retail','SME','Corporate','Premium'];
+const segData=[250,125,75,50];
+mkChart('c-seg','doughnut',segLabels,[{data:segData,backgroundColor:T,borderWidth:1}]);
+buildLegend('leg-seg',segLabels,segData,T,'');
+
+mkChart('c-credit','bar',['550-599','600-649','650-699','700-749','750-799','800-850'],[{
+  data:[42,45,98,145,122,48],
+  backgroundColor:[RED,'#e07b00',T[4],'#a8d8a8',T[5],T[0]],
+  borderRadius:3
+}]);
+
+mkChart('c-accbal','bar',['Savings','Current','Fixed Deposit','Recurring Dep'],[{
+  data:[124e6,60e6,182e6,55.8e6], backgroundColor:T, borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)}});
+
+mkChart('c-newcust','line',months24,[{
+  data:newCust, borderColor:T[2], backgroundColor:'rgba(9,139,245,.08)',
+  fill:true, tension:.35, pointRadius:2, borderWidth:2
+}]);
+
+// ─── PAGE 4 CHARTS ───────────────────────────────────────────────────────────
+const branchData = {};
+for(let i=1;i<=20;i++){branchData[`BR${String(i).padStart(2,'0')}`]=+(0.62+Math.random()*0.56).toFixed(2);}
+const bm=document.getElementById('branch-meters');
+Object.entries(branchData).forEach(([br,pct])=>{
+  const color=pct>=1?'#57B956':pct>=.8?'#FB9631':RED;
+  const pctPx=Math.min(pct*100,100);
+  bm.innerHTML+=`<div class="meter-row"><span class="meter-label">${br}</span><div class="meter-bar"><div class="meter-fill" style="width:${pctPx}%;background:${color}"></div></div><span class="meter-pct" style="color:${color}">${Math.round(pct*100)}%</span></div>`;
+});
+
+mkChart('c-regdep','bar',['Mumbai','Delhi','Bangalore','Chennai','Hyderabad','Pune','Kolkata'],[{
+  data:[920,780,640,520,480,420,380].map(v=>v*1e5),
+  backgroundColor:T, borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)},extra:{indexAxis:'y'}});
+
+const topBranches=['BR12','BR01','BR04','BR06','BR09','BR02','BR08','BR05','BR03','BR07'];
+const topLoanData=[342,298,276,254,231,218,205,192,178,165].map(v=>v*1e5);
+mkChart('c-branchloan','bar',topBranches,[{
+  data:topLoanData, backgroundColor:T[1], borderRadius:3
+}],{yTicks:{callback:v=>fmt(v)}});
+
+const btLabels=['Metro','Urban','Semi-Urban','Rural'];
+const btData=[5,7,5,3];
+mkChart('c-brtype','doughnut',btLabels,[{data:btData,backgroundColor:[T[0],T[1],T[2],T[4]],borderWidth:1}]);
+buildLegend('leg-brtype',btLabels,btData,[T[0],T[1],T[2],T[4]],'');
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function buildLegend(id,labels,data,colors,suffix){
+  const total=data.reduce((a,b)=>a+b,0);
+  const el=document.getElementById(id);
+  if(!el)return;
+  labels.forEach((l,i)=>{
+    const pct=suffix==='%'?Math.round(data[i]/total*100)+'%':data[i];
+    el.innerHTML+=`<div class="donut-legend-item"><div class="donut-dot" style="background:${colors[i]}"></div><span style="color:#6b7a99">${l}</span><span style="margin-left:auto;font-weight:600;color:#0d1b2e;padding-left:8px">${pct}</span></div>`;
+  });
+}
+
+function buildTreemap(id,labels,values,colors){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const total=values.reduce((a,b)=>a+b,0);
+  labels.forEach((l,i)=>{
+    const pct=values[i]/total;
+    const cell=document.createElement('div');
+    cell.className='treemap-cell';
+    cell.style.background=colors[i];
+    cell.style.flex=`${pct*100} 1 0`;
+    cell.style.minWidth=pct>0.1?'60px':'30px';
+    cell.innerHTML=`<span class="tm-label">${l}</span><span class="tm-val">₹${values[i]}Cr</span>`;
+    el.appendChild(cell);
+  });
+}
+
+// ─── PAGE SWITCHER ────────────────────────────────────────────────────────────
+function showPage(idx){
+  document.querySelectorAll('.pnav-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===idx));
+}
+
+// ─── SLICER (visual filter indicator) ────────────────────────────────────────
+function applySlicers(){
+  const yr=document.getElementById('sl-year').value;
+  const rg=document.getElementById('sl-region').value;
+  // Animate KPI cards to show filter is applied
+  document.querySelectorAll('.kpi-val').forEach(el=>{
+    el.style.opacity='0.5';
+    setTimeout(()=>el.style.opacity='1',400);
+  });
+}
+</script>
+</body>
+</html>
